@@ -1,0 +1,95 @@
+from flask import Flask, request, render_template_string, redirect, url_for
+
+app = Flask(__name__)
+
+# Security credentials
+PASSWORD1 = "wmk3302009"
+PASSWORD2 = "lisakaliber1999"
+SECURITY_QUESTION = "Who is William's first love?"
+SECURITY_ANSWER = "klaraross3rdgrade"
+
+# HTML templates
+LOCK_SCREEN_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Lock</title>
+</head>
+<body>
+    <h2>{{ message }}</h2>
+    <form method="post">
+        <label for="answer">{{ prompt }}</label><br>
+        <input type="password" name="answer" required><br><br>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>
+"""
+
+EDITOR_HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Editor</title>
+</head>
+<body>
+    <h1>Document Editor</h1>
+    <textarea rows="20" cols="80" placeholder="Start typing your document here..."></textarea>
+</body>
+</html>
+"""
+
+@app.route("/", methods=["GET", "POST"])
+def lock_screen():
+    # Track login stage
+    if "stage" not in request.args:
+        stage = 1
+    else:
+        stage = int(request.args["stage"])
+
+    # Handle POST requests
+    if request.method == "POST":
+        user_input = request.form.get("answer", "").strip()
+        attempts = int(request.args.get("attempts", 2)) - 1
+
+        if stage == 1 and user_input == PASSWORD1:
+            return redirect(url_for("lock_screen", stage=2, attempts=2))
+        elif stage == 2 and user_input == PASSWORD2:
+            return redirect(url_for("lock_screen", stage=3, attempts=2))
+        elif stage == 3 and user_input.lower() == SECURITY_ANSWER.lower():
+            return redirect(url_for("editor"))
+        elif attempts <= 0:
+            return render_template_string(
+                LOCK_SCREEN_HTML,
+                message="Too many failed attempts. Access denied.",
+                prompt="",
+            )
+        else:
+            return redirect(url_for("lock_screen", stage=stage, attempts=attempts))
+
+    # Prompt based on the stage
+    if stage == 1:
+        prompt = "Enter the first password:"
+    elif stage == 2:
+        prompt = "Enter the second password:"
+    elif stage == 3:
+        prompt = SECURITY_QUESTION
+    else:
+        prompt = "Error: Invalid stage."
+
+    return render_template_string(
+        LOCK_SCREEN_HTML,
+        message=f"Stage {stage} - {request.args.get('attempts', 2)} attempts remaining.",
+        prompt=prompt,
+    )
+
+@app.route("/editor")
+def editor():
+    return render_template_string(EDITOR_HTML)
+
+if __name__ == "__main__":
+    app.run(debug=True)
